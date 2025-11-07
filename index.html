@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Visualizador de Datos de Ciudades</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body { font-family: "Segoe UI", Roboto, sans-serif; background-color: #f6f8fa; color: #333; margin: 0; padding: 0; }
+  header { background-color: #2c3e50; color: white; padding: 15px 20px; text-align: center; }
+  main { max-width: 900px; margin: 30px auto; background: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  #links { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; }
+  #links a { background-color: #4e79a7; color: white; padding: 8px 12px; border-radius: 5px; text-decoration: none; }
+  #links a:hover { background-color: #366191; transform: translateY(-2px); }
+  #chartContainer { display: none; text-align: center; }
+  #backBtn { background-color: #e15759; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<header><h1>📊 Visualizador de Datos de Ciudades</h1></header>
+<main>
+  <div id="message">✅ Datos de ejemplo cargados correctamente.</div>
+  <p id="instructions">Haz clic en una ciudad para ver sus datos.</p>
+  <div id="links"></div>
+  <div id="chartContainer">
+    <h2 id="cityName"></h2>
+    <canvas id="chart"></canvas>
+    <button id="backBtn">⬅️ Volver</button>
+  </div>
+</main>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("✅ Script loaded correctly");
+
+  let chart;
+  let globalMeans = null;
+  let dataRows = [];
+
+  const messageDiv = document.getElementById("message");
+  const chartContainer = document.getElementById("chartContainer");
+  const linksDiv = document.getElementById("links");
+  const instructionsEl = document.getElementById("instructions");
+  const backBtn = document.getElementById("backBtn");
+  const cityNameDiv = document.getElementById("cityName");
+
+  const cityNames = ["Madrid","Barcelona","Valencia","Sevilla","Bilbao","Zaragoza","Málaga","Murcia","Palma","Valladolid","Córdoba","Vigo","Gijón","Hospitalet","La Coruña","Granada","Elche","Oviedo","Badalona","Cartagena","Terrassa","Jerez","Sabadell","Móstoles","Santa Cruz","Pamplona","Almería","Fuenlabrada","Donostia","Leganés","Santander","Castellón","Burgos","Albacete","Alcorcón","Getafe","Salamanca","Huelva","Logroño","Badajoz","San Cristóbal","Tarragona","Lleida","León","Cádiz","Jaén","Ourense","Algeciras","Marbella","Torrejón","Cáceres","Reus","Lugo","Santiago","Mataró","Toledo","Guadalajara","Ceuta","Melilla","Ponferrada","Orihuela","Avilés"];
+
+  cityNames.forEach(city => {
+    for (let year = 2020; year <= 2022; year++) {
+      dataRows.push({
+        AUF: city,
+        año: year,
+        "cuña_laboral": +(Math.random() * 0.1 + 0.3).toFixed(2),
+        eficiencia: +(Math.random() * 0.2 + 0.6).toFixed(2),
+        amenidades: +(Math.random() * 0.3 + 0.6).toFixed(2),
+        fricciones_excesivas: +(Math.random() * 0.2 + 0.4).toFixed(2)
+      });
+    }
+  });
+
+  const vars = ["cuña_laboral","eficiencia","amenidades","fricciones_excesivas"];
+  globalMeans = {};
+  vars.forEach(v => {
+    const vals = dataRows.map(d => parseFloat(d[v]));
+    globalMeans[v] = vals.reduce((a,b)=>a+b,0)/vals.length;
+  });
+
+  dataRows.sort((a,b)=>a.AUF.localeCompare(b.AUF,"es",{sensitivity:"base"}));
+  createLinks(dataRows);
+
+  function createLinks(data){
+    linksDiv.innerHTML="";
+    const uniqueCities=[...new Set(data.map(d=>d.AUF))];
+    uniqueCities.forEach(city=>{
+      const a=document.createElement("a");
+      a.href="#";
+      a.textContent=city;
+      a.onclick=e=>{
+        e.preventDefault();
+        showCityOptions(city);
+      };
+      linksDiv.appendChild(a);
+    });
+  }
+
+  function showCityOptions(city){
+    linksDiv.style.display="none";
+    instructionsEl.style.display="none";
+    messageDiv.style.display="none";
+    chartContainer.style.display="block";
+    cityNameDiv.textContent=city;
+
+    const btnContainer=document.createElement("div");
+    btnContainer.id="cityButtons";
+    btnContainer.innerHTML=`<button id="avgBtn">📊 Ver promedio</button> <button id="evolBtn">📈 Evolución</button>`;
+    cityNameDiv.after(btnContainer);
+
+    document.getElementById("avgBtn").onclick=()=>showChart(city,"average");
+    document.getElementById("evolBtn").onclick=()=>showChart(city,"time");
+    showChart(city,"average");
+  }
+
+  function showChart(city,mode){
+    const cityData=dataRows.filter(d=>d.AUF===city);
+    const ctx=document.getElementById("chart").getContext("2d");
+    if(chart) chart.destroy();
+
+    const labels=["Cuña laboral","Productividad","Amenidades","Fricciones excesivas"];
+
+    if(mode==="average"){
+      const latestData=cityData.reduce((a,b)=>a.año>b.año?a:b);
+      const cityValues=vars.map(v=>latestData[v]);
+      const meanValues=vars.map(v=>globalMeans[v]);
+
+      chart=new Chart(ctx,{
+        type:"bar",
+        data:{labels,datasets:[
+          {label:city,data:cityValues,backgroundColor:"#4e79a7"},
+          {label:"Media",data:meanValues,backgroundColor:"#f28e2b"}
+        ]},
+        options:{responsive:true,scales:{y:{beginAtZero:true}}}
+      });
+    } else {
+      const years=[...new Set(cityData.map(d=>d.año))];
+      const datasets=vars.map((v,i)=>({
+        label:labels[i],
+        data:years.map(y=>cityData.find(d=>d.año===y)[v]),
+        borderColor:["#4e79a7","#f28e2b","#e15759","#76b7b2"][i],
+        tension:0.3
+      }));
+      chart=new Chart(ctx,{
+        type:"line",
+        data:{labels:years,datasets},
+        options:{responsive:true}
+      });
+    }
+  }
+
+  backBtn.onclick=()=>{
+    chartContainer.style.display="none";
+    linksDiv.style.display="flex";
+    instructionsEl.style.display="block";
+    messageDiv.style.display="block";
+    document.getElementById("cityButtons")?.remove();
+  };
+});
+</script>
+</body>
+</html>
