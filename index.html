@@ -2,62 +2,126 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>📊 Visualizador de Indicadores CSV</title>
+  <title>📊 Visualizador de Indicadores</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      font-family: system-ui, sans-serif;
-      margin: 2rem;
-      background: #fafafa;
-      color: #222;
+      font-family: "Inter", system-ui, sans-serif;
+      margin: 0;
+      background: #f9fafb;
+      color: #1e293b;
     }
-    h1 { color: #1e3a8a; }
+
+    header {
+      background: linear-gradient(135deg, #2563eb, #1e3a8a);
+      color: white;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      font-weight: 600;
+    }
+
+    #message {
+      text-align: center;
+      padding: 1rem;
+      color: #475569;
+      font-size: 0.95rem;
+    }
+
+    #links {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+      padding: 1rem 2rem;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
     #links a {
-      display: inline-block;
-      margin: 4px 6px;
-      padding: 6px 10px;
-      background: #e0e7ff;
-      border-radius: 6px;
+      display: block;
+      text-align: center;
+      padding: 8px 10px;
+      background: white;
+      border-radius: 10px;
       text-decoration: none;
       color: #1e3a8a;
+      font-weight: 500;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      transition: all 0.2s ease;
     }
+
     #links a:hover {
-      background: #c7d2fe;
+      background: #e0e7ff;
+      transform: translateY(-2px);
     }
+
     #chartContainer {
       display: none;
-      margin-top: 20px;
+      padding: 2rem;
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     }
-    #cityButtons button {
+
+    #cityName {
+      text-align: center;
+      margin-bottom: 0.5rem;
+      color: #1e3a8a;
+    }
+
+    #cityButtons {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    #cityButtons button, #backBtn {
       margin: 0 5px 10px 0;
-      padding: 6px 12px;
-      border-radius: 6px;
+      padding: 8px 14px;
+      border-radius: 8px;
       border: none;
       background: #2563eb;
       color: white;
       cursor: pointer;
+      font-size: 0.95rem;
+      transition: background 0.2s ease;
     }
-    #cityButtons button:hover {
+
+    #cityButtons button:hover, #backBtn:hover {
       background: #1d4ed8;
     }
+
+    #backBtn {
+      display: block;
+      margin: 1rem auto 0;
+    }
+
     footer {
-      margin-top: 20px;
-      font-size: 0.85em;
+      text-align: center;
+      font-size: 0.9em;
       color: #555;
+      margin-top: 1rem;
     }
   </style>
 </head>
 <body>
-  <h1>📊 Visualizador de Indicadores CSV</h1>
-  <div id="instructions">Los datos se cargan automáticamente desde <code>data.csv</code>.</div>
+  <header>
+    <h1>📊 Visualizador de Indicadores Urbanos</h1>
+  </header>
+
   <div id="message">Cargando datos...</div>
   <div id="links"></div>
 
   <div id="chartContainer">
     <h2 id="cityName"></h2>
-    <canvas id="chart" width="800" height="400"></canvas>
     <div id="cityButtons"></div>
+    <canvas id="chart" width="800" height="400"></canvas>
     <button id="backBtn">⬅️ Volver</button>
     <footer id="footnote"></footer>
   </div>
@@ -74,14 +138,12 @@
     const messageDiv = document.getElementById("message");
     const chartContainer = document.getElementById("chartContainer");
     const linksDiv = document.getElementById("links");
-    const instructionsEl = document.getElementById("instructions");
     const backBtn = document.getElementById("backBtn");
     const cityNameDiv = document.getElementById("cityName");
     const footnote = document.getElementById("footnote");
 
     const vars = ["cuña_laboral","eficiencia","amenidades","fricciones_excesivas"];
 
-    // Try to load CSV automatically
     try {
       const response = await fetch("./data.csv");
       if (!response.ok) throw new Error("❌ No se pudo cargar data.csv");
@@ -90,7 +152,7 @@
       computeGlobalMeans();
       dataRows.sort((a,b)=>a.AUF.localeCompare(b.AUF,"es",{sensitivity:"base"}));
       createLinks(dataRows);
-      messageDiv.textContent = "✅ Datos cargados automáticamente desde data.csv.";
+      messageDiv.textContent = "✅ Datos cargados correctamente.";
     } catch (err) {
       console.error(err);
       messageDiv.textContent = "⚠️ Error al cargar data.csv. Verifique que esté en la misma carpeta que index.html.";
@@ -113,8 +175,6 @@
         const vals = dataRows.map(d => parseFloat(d[v])).filter(n => !isNaN(n));
         globalMeans[v] = vals.reduce((a,b)=>a+b,0)/vals.length;
       });
-      console.log("🌍 Global means:", globalMeans);
-      console.log("📅 All years:", allYears);
     }
 
     function createLinks(data){
@@ -134,7 +194,6 @@
 
     function showCityOptions(city){
       linksDiv.style.display="none";
-      instructionsEl.style.display="none";
       messageDiv.style.display="none";
       chartContainer.style.display="block";
       cityNameDiv.textContent=city;
@@ -159,9 +218,7 @@
           const vals = cityData.map(d => d[v]).filter(n => !isNaN(n));
           return vals.reduce((a,b)=>a+b,0)/vals.length;
         });
-
         const meanValues = vars.map(v => globalMeans[v]);
-
         chart = new Chart(ctx, {
           type: "bar",
           data: {
@@ -171,10 +228,7 @@
               { label: "Media global", data: meanValues, backgroundColor: "#f28e2b" }
             ]
           },
-          options: {
-            responsive: true,
-            scales: { y: { beginAtZero: true } }
-          }
+          options: { responsive: true, scales: { y: { beginAtZero: true } } }
         });
         footnote.textContent = "";
 
@@ -214,8 +268,7 @@
 
     backBtn.onclick=()=>{
       chartContainer.style.display="none";
-      linksDiv.style.display="flex";
-      instructionsEl.style.display="block";
+      linksDiv.style.display="grid";
       messageDiv.style.display="block";
     };
   });
